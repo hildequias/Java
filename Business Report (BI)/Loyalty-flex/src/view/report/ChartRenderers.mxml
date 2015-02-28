@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:ViewStack xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			  xmlns:s="library://ns.adobe.com/flex/spark" 
+			  xmlns:mx="library://ns.adobe.com/flex/mx"
+			  width="100%" height="100%" show="creatingBarChats()">
+	<fx:Declarations>
+		
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			import mx.charts.BarChart;
+			import mx.charts.CategoryAxis;
+			import mx.charts.Legend;
+			import mx.charts.chartClasses.Series;
+			import mx.charts.series.BarSeries;
+			import mx.collections.ArrayCollection;
+			
+			import valueObjects.ColumnVO;
+			
+			[Bindable]public var source:ArrayCollection = new ArrayCollection();
+			[Bindable]public var categoria:ArrayCollection = new ArrayCollection();
+			[Bindable]public var colunas:ArrayCollection = new ArrayCollection();
+			[Bindable]public var linhasX:ArrayCollection = new ArrayCollection();
+			[Bindable]public var metricasY:ArrayCollection = new ArrayCollection();
+			
+			public function creatingBarChats():void{
+				
+				// cria o objeto barchart e seta as propriedades basicas
+				canvasBar.removeAllChildren();
+				var barChart:BarChart = new BarChart();
+				barChart.showDataTips = true;
+				barChart.dataProvider = source;
+				
+				if(categoria.length > 0){
+					// Define a categoria axis.
+					var vAxis:CategoryAxis = new CategoryAxis();
+					vAxis.categoryField = categoria[0].field;
+					vAxis.dataProvider = source;
+					barChart.verticalAxis = vAxis;
+				}
+				
+				if(colunas.length > 0){
+					
+					// Add the series.
+					var series:Array=new Array();
+					for each(var campos:ColumnVO in colunas as ColumnVO){
+						
+						var serie:BarSeries = new BarSeries();
+						if(linhasX.length > 0){
+							serie.xField = linhasX.getItemAt(0).field ;
+							serie.displayName = linhasX.getItemAt(0).field;
+						}
+						if(metricasY.length > 0)
+							serie.yField = metricasY.getItemAt(0).field;
+						
+						series.push(serie);
+					}
+					barChart.series = series;
+				}
+				
+				// Create a legend.
+				var legend:Legend = new Legend();
+				legend.dataProvider = barChart;
+				
+				// Attach chart and legend to the display list.
+				canvasBar.addChild(barChart);
+				canvasBar.addChild(legend);
+			}
+		]]>
+	</fx:Script>
+	
+	<mx:Canvas width="100%" height="100%" id="canvasBar">
+	</mx:Canvas>
+	
+	<mx:Canvas width="100%" height="100%" id="canvasColumn">
+		
+	</mx:Canvas>
+	
+	<mx:Canvas width="100%" height="100%" id="canvasLine">
+		
+	</mx:Canvas>
+	
+	<mx:Canvas width="100%" height="100%" id="canvasPie">
+		
+	</mx:Canvas>
+	
+	<mx:Canvas width="100%" height="100%" id="canvasArea">
+		
+	</mx:Canvas>
+</mx:ViewStack>

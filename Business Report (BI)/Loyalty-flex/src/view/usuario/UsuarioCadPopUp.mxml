@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx"
+		 xmlns:services="services.*"
+		 title="Cadastro de Usuário"
+		 close="PopUpManager.removePopUp(this)"
+		 width="700" height="450" backgroundColor="#E6E8EA" >
+	
+	<s:creationComplete>
+		<![CDATA[
+			refresh();
+		]]>
+	</s:creationComplete>
+	<fx:Declarations>
+		<services:UserService id="usuarioService"/>
+		<s:CallResponder id="addUsuario" >
+			<s:result>
+				<![CDATA[
+				
+				PopUpManager.removePopUp(this);
+				dispatchEvent(new LoginEvent(LoginEvent.ON_POPUP_REMOVE,null));
+				]]>
+			</s:result>
+		</s:CallResponder>
+		
+		<services:UserProfileService id="perfilUsuarioService"/>
+		<s:CallResponder id="findAllPerfilUsuario" >
+			<s:result>
+				<![CDATA[
+					cmbPerfilUsuario.dataProvider = findAllPerfilUsuario.lastResult;
+					cmbPerfilUsuario.selectedItem = usuarioVO.perfilUsuario;
+				]]>
+			</s:result>
+		</s:CallResponder>
+			
+		
+		<mx:Validator id="val1" required="true" source="{txtUsuario}" property="text"
+					  requiredFieldError="Esse Campo é Obrigatório!!"
+					  trigger="{btnAdicionar}" triggerEvent="click"/>
+		
+		<mx:Validator id="val2" required="true" source="{txtPassword}" property="text"
+					  requiredFieldError="Esse Campo é Obrigatório!!"
+					  trigger="{btnAdicionar}" triggerEvent="click"/>
+		
+		<mx:Validator id="val3" required="true" source="{cmbPerfilUsuario}" property="selectedItem"
+					  requiredFieldError="Esse Campo é Obrigatório!!"
+					  trigger="{btnAdicionar}" triggerEvent="click"/>
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			import events.LoginEvent;
+			
+			import mx.controls.Alert;
+			import mx.core.mx_internal;
+			import mx.managers.PopUpManager;
+			import mx.utils.StringUtil;
+			
+			import valueObjects.UserVO;
+			
+			import view.renderers.MyGrowl;
+			
+			[Bindable]
+			public var usuarioVO:UserVO = new UserVO();
+			
+			protected function refresh(e:Event=null):void
+			{
+				findAllPerfilUsuario.token = perfilUsuarioService.findAll();
+				cmbPerfilUsuario.selectedItem = usuarioVO.perfilUsuario;
+			}
+			
+			// Cria o PopUp para mostrar o FedBack da ação do Usuário.
+			protected function msgGlowl(msg:String, img:int):void{
+				
+				var growl:MyGrowl = PopUpManager.createPopUp(
+					this, view.renderers.MyGrowl, false) as MyGrowl;
+				growl.msg = msg;
+				growl.img = img;
+				growl.x = 940;
+				growl.y = 110;
+			}
+			
+			protected function getComboBoxPerfilUsuarioLabel(data:Object):String
+			{
+				if (data!=null)
+					return data.descricao;
+				
+				return "";
+			}
+		]]>
+	</fx:Script>
+	
+	<mx:Form width="650"  x="25" y="35" height="487">
+		
+		<mx:FormItem label="Usuário" width="100%">
+			<s:TextInput id="txtUsuario" text="@{usuarioVO.usuario}" width="100%"/>
+		</mx:FormItem>
+		
+		<mx:FormItem label="Perfil de Usuário" width="100%">
+			<s:ComboBox id="cmbPerfilUsuario"
+						selectedItem="@{usuarioVO.perfilUsuario}" labelFunction="getComboBoxPerfilUsuarioLabel"/>
+		</mx:FormItem>
+			
+		<mx:FormItem label="Nome Completo" width="100%">
+			<s:TextInput id="txtNomeCompleto" text="@{usuarioVO.nome_completo}" width="100%"/>
+		</mx:FormItem>
+		
+		<mx:FormItem label="Email" width="100%">
+			<s:TextInput id="txtEmail" text="@{usuarioVO.email}" width="100%"/>
+		</mx:FormItem>
+		
+		<mx:FormItem label="Password"
+					 width="100%"
+					 >
+			<mx:TextInput displayAsPassword="true"
+						  text="@{usuarioVO.password}"
+						  maxChars="255"
+						  width="100%"
+						  id="txtPassword"
+						  restrict="^'\-"/>
+		</mx:FormItem>
+		
+		<mx:FormItem label="Observação" width="100%">
+			<s:TextArea id="txaObs" text="@{usuarioVO.observacao}" width="100%" height="61"/>
+		</mx:FormItem>
+		
+		<mx:FormItem label="Ativo:"
+					 width="100%">
+			<mx:CheckBox id="chkAtivo"
+						 selected="@{usuarioVO.ativo}"/>
+		
+			<s:Button id="btnAdicionar" label="{(usuarioVO.id>0)?'Salvar':'Adicionar'}">
+				<fx:Script>
+					<![CDATA[
+						import api.model.Model;
+					]]>
+				</fx:Script>
+				<s:click>
+					<![CDATA[
+					if (usuarioVO.id==0){
+						usuarioVO.cadastro_usuario = Model.instance.usuario.loggedUser.usuario;
+						usuarioVO.cadastro_data = new Date();
+					}
+					if ( Validator.validateAll(new Array(val1,val2,val3)).length == 0)
+						addUsuario.token = (usuarioVO.id>0) ? usuarioService.update(usuarioVO):usuarioService.add(usuarioVO);
+					]]>
+				</s:click>
+			</s:Button>
+		</mx:FormItem>
+	</mx:Form>
+</s:TitleWindow>

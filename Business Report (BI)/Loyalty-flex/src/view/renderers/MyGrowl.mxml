@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		   xmlns:s="library://ns.adobe.com/flex/spark" 
+		   xmlns:mx="library://ns.adobe.com/flex/mx"
+		   backgroundColor="#3649BE" 
+		   backgroundAlpha="0.4" 
+		   borderColor="#3649BE" 
+		   borderStyle="solid"
+		   width="374" height="80"
+		   creationComplete="init()">
+		
+	<fx:Script>
+		<![CDATA[
+			import flash.events.TimerEvent;
+			import flash.utils.Timer;
+			
+			import mx.managers.PopUpManager;
+			
+			public var msg:String = new String();
+			public var img:int = 0;
+			private var tmr:Timer;
+			
+			// Inicia-se a mensagem
+			public function init():void{
+				
+				lblMsg.text = msg;
+				if(img == 0){
+					imgAlertOk.visible = true;
+					imgAlertOk.includeInLayout = true;
+				}else{
+					imgAlertNo.visible = true;
+					imgAlertNo.includeInLayout = true;
+				}
+				
+				
+				tmr = new Timer(1000,4);
+				tmr.addEventListener(TimerEvent.TIMER_COMPLETE, onRemovePopUp);
+				tmr.start();
+			}
+			
+			private function onRemovePopUp(e:Event):void {
+				
+				PopUpManager.removePopUp(this);
+			}
+		]]>
+	</fx:Script>
+	
+	<mx:Image id="imgAlertOk" x="6" y="8" width="61" height="60" source = "@Embed('/assets/images/Info.png')"
+			  visible="false" includeInLayout="false"/>
+	
+	<mx:Image id="imgAlertNo" x="6" y="8" width="61" height="60" source = "@Embed('/assets/images/alert-stop.png')"
+			  visible="false" includeInLayout="false"/>
+	
+	<s:Label id="lblMsg" width="276" x="79" y="32" height="26"  fontWeight="bold"/>
+	
+</mx:Canvas>

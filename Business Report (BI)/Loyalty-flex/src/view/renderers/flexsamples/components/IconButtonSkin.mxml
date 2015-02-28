@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Skin xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" 
+		xmlns:mx="library://ns.adobe.com/flex/mx">
+	<!-- host component -->
+	<fx:Metadata>
+		[HostComponent("view.renderers.flexsamples.components.IconButton")]
+	</fx:Metadata>
+	
+	<s:HGroup horizontalCenter="0" verticalCenter="1" left="10" right="10" top="2" bottom="2">
+		<s:BitmapImage id="iconImage"
+					   source="{hostComponent.getStyle('icon')}"/>
+		<s:Label id="labelDisplay" textAlign="center" verticalAlign="middle" maxDisplayedLines="1" 
+				 horizontalCenter="0" verticalCenter="1" 
+				 left="10" right="10" top="2" bottom="2" />
+	</s:HGroup>
+</s:Skin>

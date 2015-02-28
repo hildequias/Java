@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project-modules id="moduleCoreId" project-version="1.5.0">
+    <wb-module deploy-name="Loyalty-java">
+        <wb-resource deploy-path="/" source-path="/WebContent"/>
+        <wb-resource deploy-path="/WEB-INF/classes" source-path="/src"/>
+        <property name="context-root" value="Loyalty-java"/>
+        <property name="java-output-path" value="/Loyalty-java/WebContent/WEB-INF/classes"/>
+    </wb-module>
+</project-modules>

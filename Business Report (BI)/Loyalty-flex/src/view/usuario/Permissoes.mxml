@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<view:BaseCad xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			  xmlns:s="library://ns.adobe.com/flex/spark" 
+			  xmlns:mx="library://ns.adobe.com/flex/mx" xmlns:view="view.*"
+			  xmlns:viewStackEffects="org.efflex.mx.viewStackEffects.*"
+			  xmlns:valueObjects="valueObjects.*" xmlns:services="services.*"
+			  width="100%" height="100%"
+			  xmlns:components="view.renderers.flexsamples.components.*">
+	
+	<view:creationComplete>
+		<![CDATA[
+			
+			refreshPerfilUsuario();
+			onShow(); 
+		]]>
+	</view:creationComplete>
+	
+	<fx:Declarations>
+		<services:PermissionService id="permissaoService"/> <!-- chamada ao serviço java de permissões -->
+		<s:CallResponder id="getByPerfilUsuarioReturnPermissoes" result="permissaoService_resultHandler(event)" />
+		<s:CallResponder id="addListaPermissao" />
+		
+		<services:UserProfileService id="perfilUsuarioService"/> <!-- chamada ao serviço java de Perfis -->
+		<s:CallResponder id="findAllPerfilUsuario">
+			<s:result>
+				<![CDATA[
+					cmbPerfilUsuario.selectedIndex=-1;
+				]]>
+			</s:result>
+		</s:CallResponder>
+		
+		<services:ResourceService id="recursoService" /> <!-- chamada ao serviço java de recursos -->
+		<s:CallResponder id="fillAllRecurso" result="recursoService_resultHandler(event)"/>
+			
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			import assets.Assets;
+			
+			import flash.net.registerClassAlias;
+			
+			import mx.collections.ArrayCollection;
+			import mx.controls.List;
+			import mx.rpc.events.ResultEvent;
+			
+			import valueObjects.UserProfileVO;
+			import valueObjects.PermissionVO;
+			import valueObjects.ResourceVO;
+			
+			[Bindable]
+			public var visao:int;
+			
+			[Bindable] 
+			private var _sourceRecursos:ArrayCollection = new ArrayCollection(); // Array associada a grid.
+			
+			// Atualiza a combo.
+			protected function refreshPerfilUsuario():void{
+				
+				findAllPerfilUsuario.token = perfilUsuarioService.findAll();
+			}
+			
+			// Metodo que envia uma solicitação ao serviço java pedindo todos os perfis para ser setado na combo.
+			protected function onShow():void
+			{
+				fillAllRecurso.token = recursoService.findAll();
+			}
+			
+			// Label function da combo de Perfil
+			protected function getComboBoxPerfilUsuarioLabel(data:Object):String
+			{
+				if (data!=null)
+					return data.descricao;
+				
+				return "";
+			}
+			
+			// Seta na arraycollection que esta associada a grid o resultado do fillAllRecurso
+			protected function recursoService_resultHandler(e:ResultEvent):void{
+				
+				if (e.result != null)
+				{
+					_sourceRecursos = e.result as ArrayCollection;
+				}
+			}
+			
+			// Apos o usuário selecionar um valor na combo de perfil, envia para o serviço java o perfil selecionado
+			protected function changeCmbPerfilUsuario():void{
+				
+				if (cmbPerfilUsuario.selectedIndex<0) return;
+				
+				getByPerfilUsuarioReturnPermissoes.token = permissaoService.getByPerfilUsuario(cmbPerfilUsuario.selectedItem as UserProfileVO);
+			}
+			
+			// Resposta do Serviço java com a lista de permissões que o perfil possui, percorre a grid e seta os valores
+			protected function permissaoService_resultHandler(e:ResultEvent):void{
+				
+				for each (var r:ResourceVO in _sourceRecursos)
+				{
+					r.selected = false;
+					r.novo = false;
+					r.editar = false;
+					r.excluir = false;
+					for each ( var p:PermissionVO in ArrayCollection(e.result)){
+						if (p.recurso.id == r.id){
+							
+							r.selected = true;
+							
+							if(p.novo == true)
+								r.novo = true;
+							
+							if(p.editar == true)
+								r.editar = true;
+							
+							if(p.excluir == true)
+								r.excluir = true;
+						}
+					}
+				}
+				grid.invalidateList();
+				grid.invalidateDisplayList();
+			}
+			
+			protected function cmdAplicar():void
+			{
+				if ( cmbPerfilUsuario.selectedItem==null) return;
+				
+				// Lista de Permissoes
+				var permissoes:ArrayCollection = new ArrayCollection();
+				
+				//Percorre a grid e preenche a lista de permissões.
+				for each (var r:ResourceVO in _sourceRecursos)
+				{
+					if (r.selected)
+					{
+						var p:PermissionVO = new PermissionVO();
+						p.novo = r.novo;
+						p.editar = r.editar;
+						p.excluir = r.excluir;
+						p.recurso = r;
+						p.perfilUsuario = UserProfileVO(cmbPerfilUsuario.selectedItem);
+						permissoes.addItem(p);
+					}
+				}
+				//Envia para o serviço Java a lista de Permissões.
+				addListaPermissao.token = permissaoService.addListaPermissao(permissoes,UserProfileVO(cmbPerfilUsuario.selectedItem) );
+			}
+		]]>
+	</fx:Script>
+	
+	
+	<s:Group width="100%" height="100%" >
+		
+		<s:layout >
+			<s:VerticalLayout/>
+		</s:layout>
+		
+		<s:HGroup width="100%" paddingTop="10" paddingLeft="10" paddingRight="10" paddingBottom="10">
+			<s:VGroup >
+				<mx:FormItemLabel text="Perfil"/>
+				<s:HGroup >
+					<s:ComboBox id="cmbPerfilUsuario" dataProvider="{findAllPerfilUsuario.lastResult}"
+								labelFunction="getComboBoxPerfilUsuarioLabel" change="changeCmbPerfilUsuario()"/>
+					<s:Button width="20" height="23" click="refreshPerfilUsuario()"/>
+				</s:HGroup>
+			</s:VGroup>
+			
+		</s:HGroup>
+		
+		<s:VGroup width="100%" paddingTop="10" paddingLeft="10" paddingRight="10" paddingBottom="10">
+			<s:Button label="Aplicar">
+				<s:click>
+					<![CDATA[
+						cmdAplicar();
+					]]>
+				</s:click>
+			</s:Button>
+		</s:VGroup>
+		
+		<mx:DataGrid id="grid" 
+					 width="100%" 
+					 height="100%" 
+					 dataProvider="{_sourceRecursos}"
+					 paddingRight="10" paddingLeft="10" rowHeight="30" borderAlpha="0.4"
+					 headerHeight="30" verticalGridLines="false" headerStyleName="centered" headerSeparatorSkin="{Assets.HEADER_SEPARATOR}"
+					 >
+			<mx:keyDown>
+				<![CDATA[
+					
+				]]>
+			</mx:keyDown>
+			<mx:columns>
+				
+				<mx:DataGridColumn headerText="Nome" dataField="nome_exibicao"/>
+				<mx:DataGridColumn headerText="Descrição" dataField="descricao"/>
+				
+				<mx:DataGridColumn headerText="Acesso" dataField="selected" width="50">
+					<mx:itemRenderer>
+						<fx:Component>
+							<mx:CheckBox paddingLeft="10" selectedField="selected" change=" data.selected = event.target.selected "/>
+						</fx:Component> 
+					</mx:itemRenderer>
+				</mx:DataGridColumn>
+				
+				<mx:DataGridColumn headerText="Novo" dataField="novo" width="50">
+					<mx:itemRenderer>
+						<fx:Component>
+							<mx:CheckBox paddingLeft="10" selectedField="novo" change=" data.novo = event.target.selected "/>
+						</fx:Component>
+					</mx:itemRenderer>
+				</mx:DataGridColumn>
+				
+				<mx:DataGridColumn headerText="Editar" dataField="editar" width="50">
+					<mx:itemRenderer>
+						<fx:Component>
+							<mx:CheckBox paddingLeft="10" selectedField="editar" change=" data.editar = event.target.selected "/>
+						</fx:Component>
+					</mx:itemRenderer>
+				</mx:DataGridColumn>
+				
+				<mx:DataGridColumn headerText="Excluir" dataField="excluir" width="50">
+					<mx:itemRenderer>
+						<fx:Component>
+							<mx:CheckBox paddingLeft="10" selectedField="excluir" change=" data.excluir = event.target.selected "/>
+						</fx:Component>
+					</mx:itemRenderer>
+				</mx:DataGridColumn>
+			</mx:columns>
+		</mx:DataGrid>
+	</s:Group>
+</view:BaseCad>

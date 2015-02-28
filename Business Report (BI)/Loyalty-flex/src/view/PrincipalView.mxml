@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx"
+		 width="100%" height="100%"
+		 xmlns:home="view.home.*" xmlns:usuario="view.usuario.*"
+		 xmlns:viewStackEffects="org.efflex.mx.viewStackEffects.*" 
+		 xmlns:viewStackEffects1="org.efflex.spark.viewStackEffects.*" xmlns:conexoes="view.conexoes.*" xmlns:report="view.report.*">
+	
+	<fx:Style source="view/renderers/styles/CollapsibleAccordionStyle.css" />
+	
+	<fx:Declarations>
+		<viewStackEffects:CoverFlowPapervision3D id="effectUp" duration="500" direction="horizontal" transparent="true"/>
+		<viewStackEffects:CubePapervision3D id="effectDown" duration="500" direction="left" transparent="true"/> 
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			import api.model.Model;
+						
+			[Bindable]
+			private var mdl:Model = Model.instance;
+		]]>
+	</fx:Script>
+	
+	<s:layout>
+		<s:VerticalLayout paddingBottom="10" paddingLeft="10" paddingRight="10" paddingTop="10" />
+	</s:layout>
+	
+	<mx:ViewStack id="vs" width="100%" height="100%" selectedIndex="{mdl.menuViewIndex}">
+		<mx:VBox width="100%" height="100%" showEffect="effectUp" hideEffect="effectDown">
+			<home:Home title="Home Page Business"/>
+		</mx:VBox>
+		
+		<mx:VBox width="100%" height="100%" showEffect="effectUp" hideEffect="effectDown">
+			<usuario:UsuarioCad title="Cadastro de Usuário" visao="1"/>
+		</mx:VBox>
+		
+		<mx:VBox width="100%" height="100%" showEffect="effectUp" hideEffect="effectDown">
+			<usuario:PerfilCad title="Cadastro de Perfil de Usuário" visao="2"/>
+		</mx:VBox>
+		
+		<mx:VBox width="100%" height="100%" showEffect="effectUp" hideEffect="effectDown">
+			<usuario:Permissoes title="Controle de Permissões de Usuário" visao="3"/>
+		</mx:VBox>
+		
+		<mx:VBox width="100%" height="100%" showEffect="effectUp" hideEffect="effectDown">
+			<conexoes:ConexoesCad title="Cadastro de Conexões de Banco de Dados" visao="4"/>
+		</mx:VBox>
+		
+		<mx:VBox width="100%" height="100%" showEffect="effectUp" hideEffect="effectDown">
+			<report:ReportCad title="Construtor de Relatórios" visao="5"/>
+		</mx:VBox>
+	</mx:ViewStack>
+</s:Group>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" 
+			   xmlns:usuario="view.usuario.*"
+			   xmlns:view="view.*"
+			   minWidth="955" minHeight="600"
+			   creationComplete="OnComplete(event)"
+			   >
+	<fx:Script>
+		<![CDATA[
+			import api.model.Model;
+			
+			import events.LoginEvent;
+			
+			import flash.net.registerClassAlias;
+			
+			import mx.events.FlexEvent;
+			
+			import valueObjects.BaseVO;
+			import valueObjects.ColumnVO;
+			import valueObjects.PermissionVO;
+			import valueObjects.ResourceVO;
+			import valueObjects.UserProfileVO;
+			import valueObjects.UserVO;
+			
+			protected function OnComplete(event:FlexEvent):void
+			{
+				//Registro dos ValueObjects
+				registerClassAlias("valueObjects.UserVO",valueObjects.UserVO);
+				registerClassAlias("valueObjects.UserProfileVO",valueObjects.UserProfileVO);
+				registerClassAlias("valueObjects.PermissionVO",valueObjects.PermissionVO);
+				registerClassAlias("valueObjects.ResourceVO",valueObjects.ResourceVO);
+				registerClassAlias("valueObjects.BaseVO",valueObjects.BaseVO);
+				registerClassAlias("valueObjects.ColumnVO",valueObjects.ColumnVO);
+				registerClassAlias("valueObjects.ConnectionVO",valueObjects.ConnectionVO);
+				registerClassAlias("valueObjects.TableVO",valueObjects.TableVO);
+				
+				//Se o login for bem sucedido
+				this.addEventListener(LoginEvent.LOGIN_OK,OnLoginOk);
+			}
+			
+			protected function OnLoginOk(e:LoginEvent):void
+			{
+				Model.instance.applicationViewIndex = 1;
+			}
+						
+		]]>
+	</fx:Script>
+	
+	<!--><fx:Style source=""/> -->
+	
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	
+	<mx:ViewStack width="100%" height="100%" selectedIndex="{Model.instance.applicationViewIndex}">
+		<usuario:LoginView login="{Model.instance.applicationViewIndex=1}"/>
+		<view:DefaultView />
+	</mx:ViewStack>
+</s:Application>

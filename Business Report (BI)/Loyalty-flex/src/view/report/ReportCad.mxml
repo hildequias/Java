@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<view:BaseCad xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			  xmlns:s="library://ns.adobe.com/flex/spark" 
+			  xmlns:mx="library://ns.adobe.com/flex/mx" xmlns:view="view.*"
+			  xmlns:viewStackEffects="org.efflex.mx.viewStackEffects.*"
+			  xmlns:valueObjects="valueObjects.*" xmlns:services="services.*"
+			  width="100%" height="100%" xmlns:components="view.renderers.flexsamples.components.*" 
+			  xmlns:viewStackEffects1="org.efflex.spark.viewStackEffects.*">
+	
+	<fx:Declarations>
+		<viewStackEffects1:ViewStackAnimate3D id="effectUp" duration="500" transparent="true"/>
+		<viewStackEffects:ViewStackEffect id="effectDown" duration="500"  transparent="true"/> 
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			import assets.Assets;
+			
+			import events.LoginEvent;
+			
+			import mx.collections.ArrayCollection;
+			import mx.core.Application;
+			import mx.core.FlexGlobals;
+			import mx.effects.Move;
+			import mx.effects.Parallel;
+			import mx.effects.Resize;
+			import mx.events.EffectEvent;
+			import mx.managers.PopUpManager;
+			
+			import view.renderers.MyProxy;
+			
+			[Bindable]
+			public var visao:int;
+			
+			private var proxy:MyProxy;
+			
+			private var reportCadPopUp:ReportCadPopUp;
+			
+			[Bindable]
+			public var _source:ArrayCollection=new ArrayCollection;
+			
+			protected function btnNovoCliked():void{
+				
+				abrirJanela(btnNovo.width, btnNovo.height, btnNovo.x, btnNovo.y);
+			}
+			
+			// Gera o efeito da tela saindo de dentro do botão.
+			private function abrirJanela(width:int, height:int, x:int, y:int ):void{
+				
+				var efeito:Parallel = new Parallel();
+				var mover:Move = new Move();
+				var redim:Resize = new Resize();
+				proxy = new MyProxy();
+				
+				//this.addChild(proxy);
+				this.addElement(proxy);
+				proxy.width = width;
+				proxy.height = height;
+				proxy.x = x;
+				proxy.y = y;
+				
+				redim.widthTo = 600;
+				redim.heightTo = 500;
+				
+				mover.xTo = (this.width/2) - 200;
+				mover.yTo = (this.height/2) - 150;
+				
+				efeito.addChild(redim);
+				efeito.addChild(mover);
+				efeito.duration = 600;
+				efeito.addEventListener(EffectEvent.EFFECT_END, janela);
+				efeito.play([proxy]);
+				
+			}
+			
+			// Abre a janela para salvar um novo registro ou atualizar um ja existente.
+			protected function janela(e:EffectEvent):void{
+				reportCadPopUp = PopUpManager.createPopUp(
+					this, ReportCadPopUp, true) as ReportCadPopUp;
+				
+				// Passa o VO Criado para a outra tela poder manipular.
+				//reportCadPopUp.perfilUsuarioVO = perfilUsuarioVO;
+				reportCadPopUp.x=FlexGlobals.topLevelApplication.width  - reportCadPopUp.width ;
+				reportCadPopUp.y=FlexGlobals.topLevelApplication.height  - reportCadPopUp.height ;
+				PopUpManager.centerPopUp(reportCadPopUp);
+				
+				reportCadPopUp.addEventListener(LoginEvent.ON_POPUP_REMOVE, onClienteSave);
+				this.removeElement(proxy);
+			}
+			
+			private function onClienteSave(evt:LoginEvent):void
+			{
+				//msgGlowl("Operação realizada com Sucesso!!");
+				//findAllPerfilUsuario.token = perfilUsuarioService.findAll();
+			}
+		]]>
+	</fx:Script>
+	
+	<mx:VBox width="100%" height="100%">
+		<s:HGroup width="100%" paddingTop="10" paddingLeft="10" paddingRight="10" paddingBottom="10">
+			
+			<!-- BOTÃO NOVO -->
+			<components:IconButton label="Novo" id="btnNovo" click="btnNovoCliked()"
+								   icon="@Embed('/assets/images/icontexto-webdev-add.png')"/>
+			
+			<mx:Spacer width="10"/>
+			
+			<!-- BOTÃO DE EDITAR -->
+			<components:IconButton label="Editar" id="btnEditar" 
+								   icon="@Embed('/assets/images/icontexto-webdev-edit.png')" />
+			
+			<mx:Spacer width="10"/>
+			
+			<!-- BOTÃO DE EXCLUIR -->
+			<components:IconButton label="Excluir" id="btnExcluir" 
+								   icon="@Embed('/assets/images/icontexto-webdev-remove.png')"/>
+			
+		</s:HGroup>
+		
+		<mx:Form width="100%" right="100%">
+			<mx:FormItem label="Descrição:">
+				<mx:HBox>
+					<mx:TextInput id="txtSearch" width="100%"
+								  />
+				</mx:HBox>
+			</mx:FormItem>
+		</mx:Form>
+		
+		<mx:DataGrid id="dg" 
+					 y="30" width="100%" left="10" height="100%"
+					 dataProvider="{_source}"
+					 paddingRight="10" paddingLeft="10" rowHeight="30" borderAlpha="0.4"
+					 headerHeight="30" verticalGridLines="false" headerStyleName="centered" headerSeparatorSkin="{Assets.HEADER_SEPARATOR}"
+					 >
+			<mx:columns>
+				<mx:DataGridColumn headerText="Código" dataField="id" width="100"/>
+				<mx:DataGridColumn headerText="Descrição" dataField="descricao"/>
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:VBox>
+</view:BaseCad>

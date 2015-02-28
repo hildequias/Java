@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+			   close="removePopUp()" title="Cadastro de Conexões de Banco de Dados"
+			   width="500" height="400" backgroundColor="#E6E8EA" xmlns:services="services.*">
+	<s:creationComplete>
+		<![CDATA[
+			cmbBanco.selectedItem = conexaoVO.banco;
+		]]>
+	</s:creationComplete>
+	
+	<fx:Declarations>
+		<services:ConnectionService id="conexaoService" />
+		<s:CallResponder id="addConexaoService" result="removePopUp()"/>
+		
+		<mx:Validator id="val1" required="true" source="{txtNome}" property="text"
+					  requiredFieldError="Esse Campo é Obrigatório!!"
+					  trigger="{btnAdicionar}" triggerEvent="click"/>
+		<mx:Validator id="val2" required="true" source="{txtServidor}" property="text"
+					  requiredFieldError="Esse Campo é Obrigatório!!"
+					  trigger="{btnAdicionar}" triggerEvent="click"/>
+		<mx:Validator id="val3" required="true" source="{txtDataBase}" property="text"
+					  requiredFieldError="Esse Campo é Obrigatório!!"
+					  trigger="{btnAdicionar}" triggerEvent="click"/>
+		<mx:Validator id="val4" required="true" source="{txtPorta}" property="text"
+					  requiredFieldError="Esse Campo é Obrigatório!!"
+					  trigger="{btnAdicionar}" triggerEvent="click"/>
+		<mx:Validator id="val5" required="true" source="{cmbBanco}" property="selectedItem"
+					  requiredFieldError="Esse Campo é Obrigatório!!"
+					  trigger="{btnAdicionar}" triggerEvent="click"/>
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			import api.model.Model;
+			
+			import events.LoginEvent;
+			
+			import mx.managers.PopUpManager;
+			
+			import spark.events.IndexChangeEvent;
+			
+			import valueObjects.ConnectionVO;
+			
+			[Bindable]
+			public var conexaoVO:ConnectionVO = new ConnectionVO();
+			
+			[Bindable]
+			[@Embed("assets/images/mysql.png")]
+			public var MYSQL:Class;
+			
+			[Bindable]
+			[@Embed("assets/images/PostGre.png")]
+			public var POSTGRE:Class;
+			
+			[Bindable]
+			[@Embed("assets/images/sql_server.png")]
+			public var SQLSERVER:Class;
+			
+			protected function removePopUp():void{
+				
+				PopUpManager.removePopUp(this);
+				dispatchEvent(new LoginEvent(LoginEvent.ON_POPUP_REMOVE,null));
+			}
+			
+			protected function combobox_changeHandler(event:IndexChangeEvent):void
+			{
+				var temp:*=ComboBox(event.target).selectedItem;
+				if (temp is String)
+				{
+					conexaoVO.banco=ComboBox(event.target).selectedItem;
+				}
+				else
+				{
+					conexaoVO.banco=ComboBox(event.target).selectedItem.label;
+				}
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<mx:Form width="394" height="290" x="50" y="27">
+				
+		<mx:FormItem label="Nome" width="100%" >
+			<s:TextInput id="txtNome" text="@{conexaoVO.nome}"  width="264"/>
+		</mx:FormItem>
+		
+		<mx:FormItem label="Banco" width="100%" >
+			<s:ComboBox id="cmbBanco" skinClass="view.renderers.flexsamples.components.ComboBoxWithImage"
+						change="combobox_changeHandler(event)">
+				<s:dataProvider>
+					<s:ArrayList>
+						<fx:Object label="MySQL"
+								   icon="{MYSQL}"/>
+						
+						<fx:Object label="PortgreSQL"
+								   icon="{POSTGRE}"/>
+						
+						<fx:Object label="SQLServer"
+								   icon="{SQLSERVER}"/>
+					</s:ArrayList>
+				</s:dataProvider>
+			</s:ComboBox>
+		</mx:FormItem>
+		
+		<mx:FormItem label="Servidor" width="100%" >
+			<s:TextInput id="txtServidor" text="@{conexaoVO.servidor}"  width="264"/>
+		</mx:FormItem>
+		
+		<mx:FormItem label="Porta" width="100%" >
+			<s:TextInput id="txtPorta" text="@{conexaoVO.porta}"  width="264" restrict="0-9"/>
+		</mx:FormItem>
+		
+		<mx:FormItem label="DataBase" width="100%" >
+			<s:TextInput id="txtDataBase" text="@{conexaoVO.data_base}"  width="264" />
+		</mx:FormItem>
+		
+		<mx:FormItem label="User" width="100%" >
+			<s:TextInput id="txtUser" text="@{conexaoVO.user}"  width="264" />
+		</mx:FormItem>
+		
+		<mx:FormItem label="Senha" width="100%" >
+			<s:TextInput id="txtSenha" text="@{conexaoVO.senha}"  width="264" displayAsPassword="true"/>
+		</mx:FormItem>
+		
+		<mx:FormItem>
+			<s:Button id="btnAdicionar" label="{(conexaoVO.id>0)?'Salvar':'Adicionar'}">
+				<s:click>
+					<![CDATA[
+						if(conexaoVO.id == 0){
+							conexaoVO.cadastro_data = new Date();
+							conexaoVO.cadastro_usuario = Model.instance.usuario.loggedUser.usuario;
+						}
+						if(conexaoVO.senha == null)
+							conexaoVO.senha = "";
+						
+						if ( Validator.validateAll(new Array(val1,val2,val3,val4,val5)).length == 0)
+							addConexaoService.token = (conexaoVO.id>0) ? conexaoService.update(conexaoVO):conexaoService.add(conexaoVO);
+					]]>
+				</s:click>
+			</s:Button>
+		</mx:FormItem>
+	</mx:Form>
+	
+</s:TitleWindow>

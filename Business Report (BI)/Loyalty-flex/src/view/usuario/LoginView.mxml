@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:VBox xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx"
+		 xmlns:valueObjects="valueObjects.*"
+		 xmlns:services="services.*"
+		 label="Login">
+	
+	<mx:creationComplete>
+		<![CDATA[
+			
+			usuarioVO = new UserVO();
+		]]>
+	</mx:creationComplete>
+	
+	<fx:Metadata>
+		[Event(name="login", type="flash.events.Event")]
+	</fx:Metadata>
+	
+	<fx:Script>
+		<![CDATA[
+			import api.model.Model;
+			import api.utils.RecursosMenu;
+			
+			import assets.Assets;
+			
+			import events.LoginEvent;
+			
+			import mx.collections.ArrayCollection;
+			import mx.rpc.events.ResultEvent;
+			
+			import services.UserService;
+			
+			import valueObjects.PermissionVO;
+			
+			protected function tryLogin_resultHandler(e:ResultEvent):void
+			{
+				if (e.result != null)
+				{
+					if (e.result is UserVO)
+					{	
+						Model.instance.usuario.loggedUser = e.result as UserVO;
+						setPermissao.token = permissaoService.getByPerfilUsuario(Model.instance.usuario.loggedUser.perfilUsuario);
+						return;
+					}
+				}
+				errorMessage.text = " Email/Senha incorretos ";
+			}
+			
+			protected function tryMenu_resultHandler(e:ResultEvent):void{
+				
+				if (e.result != null)
+				{	
+					var recursos:ArrayCollection = new ArrayCollection();
+					
+					for each (var p:PermissionVO in e.result as ArrayCollection){
+					
+						recursos.addItem(p.recurso);
+					}
+					Model.instance.menu = RecursosMenu.makeMenu(recursos);
+					Model.instance.permissoes = e.result as ArrayCollection;
+					dispatchEvent(new LoginEvent(LoginEvent.LOGIN_OK,null));
+				}
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<fx:Declarations>
+		<valueObjects:UserVO id="usuarioVO"/>
+		
+		<!-- Usuario -->
+		<services:UserService id="usuarioService"/>		
+		<s:CallResponder id="tryLogin" result="tryLogin_resultHandler(event)"/>
+		
+		<!-- Permissoes -->
+		<services:PermissionService id="permissaoService"/>		
+		<s:CallResponder id="setPermissao" result="tryMenu_resultHandler(event)" />
+		
+		<mx:Validator id="val1" requiredFieldError="Esse Campo é Obrigatório" required="true" source="{txtSenha}" 
+					  property="text" trigger="{btnLogin}" triggerEvent="click"/>
+		<mx:Validator id="val2" requiredFieldError="Esse Campo é Obrigatório" required="true" source="{txtUser}" 
+					  property="text" trigger="{btnLogin}" triggerEvent="click"/>
+	</fx:Declarations>
+	
+	<s:BorderContainer width="100%" height="100%" borderAlpha="0" borderVisible="false" backgroundImage="{Assets.BG_GRADIENTE}" backgroundImageFillMode="repeat">
+		
+		<s:VGroup width="100%" height="100%" horizontalAlign="right" verticalAlign="bottom">
+			
+			<mx:Spacer height="100%"/>
+			<s:BorderContainer width="100%" height="100%" backgroundImage="{Assets.BG_STRIPE}" borderVisible="false" backgroundImageFillMode="repeat" y="67">
+				
+				<mx:Spacer width="100"/>
+				<s:Panel x="366" y="10" title="Login" width="400" height="274">
+					<s:BorderContainer width="100%" height="100%" borderVisible="false" backgroundImage="{Assets.BG_LOGIN2}">
+
+							<s:Label id="errorMessage" bottom="-23" color="#FF0000" fontWeight="bold" x="67"/>
+							<s:Label  text="Usuário" x="88" y="68" color="#000000" fontWeight="bold"/>
+							<s:Label text="Senha" x="86" y="111" fontWeight="bold" color="#000000"/>
+							<s:TextInput id="txtSenha" text="@{usuarioVO.password}" displayAsPassword="true"  width="126" 
+										 x="86" y="125" tabIndex="2"/>
+							<s:TextInput id="txtUser" text="@{usuarioVO.usuario}" width="126" x="86" y="83" tabIndex="1"/>
+							<s:Button id="btnLogin" x="170" y="155" label="OK" width="42" tabIndex="3">
+								<s:click>
+									<![CDATA[
+									if (Validator.validateAll(new Array(val1,val2)).length == 0)
+										tryLogin.token = usuarioService.login(usuarioVO);
+									else
+										errorMessage.text = "Corrija os erros apresentados";
+									]]>
+								</s:click>
+							</s:Button>
+						
+					</s:BorderContainer>
+				</s:Panel>
+			</s:BorderContainer>
+			
+			<mx:Spacer height="70"/>
+			
+		</s:VGroup>
+	</s:BorderContainer>
+	
+</mx:VBox>
+

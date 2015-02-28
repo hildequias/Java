@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:VGroup xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="100%" height="100%" gap="0"
+		  >
+	<fx:Script>
+		<![CDATA[
+			import api.model.Model;
+			import valueObjects.ResourceVO;
+			
+			import assets.Assets;
+			
+			import mx.events.ListEvent;
+			
+			[@Embed("assets/images/Application.png")]
+			public var APPLICATION:Class;
+			
+			[@Embed("assets/images/Home.png")]
+			public var HOME:Class;
+			
+			[@Embed("assets/images/People.png")]
+			public var PEOPLE:Class;
+			
+			[@Embed("assets/images/Eye.png")]
+			public var EYE:Class;
+			
+			[@Embed("assets/images/Database.png")]
+			public var DATABASE:Class;
+			
+			[@Embed("assets/images/Builder.png")]
+			public var BUILDER:Class;
+			
+			[Bindable]
+			private var mdl:Model = Model.instance;
+			
+			private function menuContainerChange(evt:ListEvent):void
+			{
+				var r:ResourceVO = listMenu.selectedItem as ResourceVO;
+				if (r.group)
+					return;
+				
+				mdl.menuViewIndex = r.visao;
+			}
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	
+	
+	<s:BorderContainer width="100%" height="20" borderAlpha="0" borderVisible="false" backgroundImage="{Assets.MENU_HEADER}">
+		
+	</s:BorderContainer>
+	
+	<s:BorderContainer width="100%" height="100%" borderAlpha="0" borderVisible="false" backgroundColor="#ececec">
+
+		<s:layout>
+			<s:VerticalLayout  />
+		</s:layout>
+		
+		<mx:List id="listMenu" itemClick="menuContainerChange(event)" contentBackgroundColor="#ececec" 
+				 selectionColor="#ececec" rollOverColor="#ececec" height="100%" width="100%" borderVisible="false" 
+				 dataProvider="{Model.instance.menu}" itemRenderer="view.renderers.MenuListItemRenderer"
+				 borderStyle="none"
+				 iconField="icon" 
+				 showDataTips="true"
+				 labelField="nome_exibicao"
+				 />
+		
+	</s:BorderContainer>
+</s:VGroup>

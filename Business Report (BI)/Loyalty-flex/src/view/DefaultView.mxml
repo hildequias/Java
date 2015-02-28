@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:VBox xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx"
+		 xmlns:view="view.*" xmlns:menu="view.menu.*"
+		 xmlns:components="view.renderers.flexsamples.components.*"
+		 width="100%" height="100%">
+	
+	<fx:Script>
+		<![CDATA[
+			import api.model.Model;
+			
+			import assets.Assets;
+			
+			private function formatData(date:Date):String
+			{
+				if (date.fullYear==0 || date.fullYear==1)
+					return 'primeiro acesso';
+				return dtFormat.format(date);
+			}
+			
+			private function logout():void
+			{
+				var ref : URLRequest = new URLRequest(getUrlPath() + 'Main.html');
+				navigateToURL(ref, "_self");
+			}
+			
+			public static function getUrlPath() : String
+			{
+				var fullUrl : String = ExternalInterface.call('eval', 'document.location.href');
+				var url : String = fullUrl.split('?')[0];
+				var arr : Array = url.split('/');
+				var result : String = '';
+				
+				for (var i : int = 0; i < arr.length - 1; i++)
+				{
+					result += arr[i] + '/';
+				}
+				return result;
+			}
+		]]>
+	</fx:Script>
+	<fx:Style source="view/renderers/styles/CollapsibleAccordionStyle.css"/>
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+		<mx:DateFormatter id="dtFormat" formatString="DD/MM/YYYY JJ:NN"/>
+	</fx:Declarations>
+	
+	<s:BorderContainer width="100%" height="100%" borderAlpha="0" borderVisible="false" backgroundImage="{Assets.BG_GRADIENTE}" backgroundImageFillMode="repeat">	
+		<s:BorderContainer width="100%" height="60" backgroundImage="{Assets.BG_GRADIENTE}" backgroundImageFillMode="repeat" borderVisible="false" dropShadowVisible="true">
+			<s:layout>
+				<s:HorizontalLayout />
+			</s:layout>
+			<mx:Spacer width="10"/>
+			<s:VGroup width="350" height="100%" verticalAlign="middle" horizontalAlign="left" paddingRight="10">
+				
+				<s:Label text="Olá {Model.instance.usuario.loggedUser.usuario}" fontWeight="bold" color="#000000"/>
+				<s:HGroup>
+					<s:Label text="Ultimo Login: " fontWeight="bold" color="#000000" />
+					<s:Label text="{formatData(Model.instance.usuario.loggedUser.data_ultimo_login)}" color="#000000"/>
+				</s:HGroup>
+				<mx:LinkButton label="Sair" color="#000000" fontWeight="bold" click="logout()"/>
+			</s:VGroup>
+			
+		</s:BorderContainer>
+		
+		<s:HGroup width="100%" height="100%" paddingTop="65">
+				<components:CollapsibleAccordion id="collapsibleAccordion" color="#000000" 
+												 height="100%"
+												 orientation="right"
+												 barSize="30"
+												 currentWidth="36"
+												 drawerButtonStyle="drawerButton"
+												 closeButtonStyle="drawerCloseRight"
+												 accordianStyle="drawerAccordion">
+					<mx:Canvas width="100%" height="100%" label="Menu" 
+							   icon="@Embed(source='assets/images/menu.png')" >
+						<!-- MENU -->
+						<menu:MenuView />
+					</mx:Canvas> 
+					
+					<mx:Canvas width="100%" height="100%" label="Meus Relatórios" 
+							   icon="@Embed(source='assets/images/PieChart.png')"  >
+						<!-- Relatórios -->
+						
+					</mx:Canvas>
+				</components:CollapsibleAccordion>
+			
+			
+			<!-- Principal visão, onde são exibidas as telas -->
+			<view:PrincipalView id="principalViews" />
+			
+		</s:HGroup>
+	</s:BorderContainer>
+</mx:VBox>

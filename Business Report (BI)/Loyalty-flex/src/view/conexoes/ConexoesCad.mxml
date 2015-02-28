@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<view:BaseCad xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			  xmlns:s="library://ns.adobe.com/flex/spark" 
+			  xmlns:mx="library://ns.adobe.com/flex/mx" xmlns:view="view.*"
+			  xmlns:viewStackEffects="org.efflex.mx.viewStackEffects.*"
+			  xmlns:valueObjects="valueObjects.*" xmlns:services="services.*"
+			  width="100%" height="100%" xmlns:components="view.renderers.flexsamples.components.*">
+	<fx:Script>
+		<![CDATA[
+			import api.model.Model;
+			
+			import assets.Assets;
+			
+			import events.LoginEvent;
+			
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.effects.Move;
+			import mx.effects.Parallel;
+			import mx.effects.Resize;
+			import mx.events.CloseEvent;
+			import mx.events.EffectEvent;
+			import mx.events.FlexEvent;
+			import mx.managers.PopUpManager;
+			import mx.rpc.events.ResultEvent;
+			import mx.utils.StringUtil;
+			
+			import valueObjects.PermissionVO;
+			
+			import view.renderers.MyGrowl;
+			import view.renderers.MyProxy;
+			import view.renderers.flexsamples.components.ComboBoxWithImage;
+
+			[Bindable]
+			public var visao:int;
+			
+			[Bindable]
+			public var _source:ArrayCollection=new ArrayCollection;
+			
+			private var proxy:MyProxy;
+			
+			private var conexoesCadPopUp:ConexoesCadPopUp;
+			
+			protected function initPermissoes():void{
+				
+				for each (var p:PermissionVO in Model.instance.permissoes){
+					
+					if(p.recurso.id == visao){
+						
+						if(p.novo == false){
+							btnNovo.visible = false;
+							btnNovo.includeInLayout = false;
+						}
+						
+						if(p.editar == false){
+							btnEditar.visible = false;
+							btnEditar.includeInLayout = false;
+						}
+						
+						if(p.excluir == false){
+							
+							btnExcluir.visible = false;
+							btnExcluir.includeInLayout = false;
+						}
+					}
+				}
+			}
+			
+			protected function conexaoService_resultHandler(e:ResultEvent):void{
+				
+				if (e.result != null)
+				{
+					_source = e.result as ArrayCollection;
+				}
+			}
+			
+			protected function btnNovoCliked():void{
+				
+				conexaoVO = new ConnectionVO();
+				abrirJanela(btnNovo.width, btnNovo.height, btnNovo.x, btnNovo.y);
+			}
+			
+			// Gera o efeito da tela saindo de dentro do botão.
+			private function abrirJanela(width:int, height:int, x:int, y:int ):void{
+				
+				var efeito:Parallel = new Parallel();
+				var mover:Move = new Move();
+				var redim:Resize = new Resize();
+				proxy = new MyProxy();
+				
+				//this.addChild(proxy);
+				this.addElement(proxy);
+				proxy.width = width;
+				proxy.height = height;
+				proxy.x = x;
+				proxy.y = y;
+				
+				redim.widthTo = 600;
+				redim.heightTo = 500;
+				
+				mover.xTo = (this.width/2) - 200;
+				mover.yTo = (this.height/2) - 150;
+				
+				efeito.addChild(redim);
+				efeito.addChild(mover);
+				efeito.duration = 600;
+				efeito.addEventListener(EffectEvent.EFFECT_END, janela);
+				efeito.play([proxy]);
+				
+			}
+			
+			// Abre a janela para salvar um novo registro ou atualizar um ja existente.
+			private function janela(e:EffectEvent):void{
+				
+				conexoesCadPopUp = PopUpManager.createPopUp(this, view.conexoes.ConexoesCadPopUp, true) as ConexoesCadPopUp;
+				
+				// Passa o VO Criado para a outra tela poder manipular.
+				conexoesCadPopUp.conexaoVO = conexaoVO;
+				PopUpManager.centerPopUp(conexoesCadPopUp);
+				
+				conexoesCadPopUp.addEventListener(LoginEvent.ON_POPUP_REMOVE, onClienteSave);
+				this.removeElement(proxy);
+			}
+			
+			// Passa para a função msgGrowl a mensagem de FedBack ao Usuário e atualiza a grid.
+			protected function onClienteSave(evt:LoginEvent):void
+			{
+				msgGlowl("Operação realizada com Sucesso!!");
+				findAllConexaoService.token = conexaoService.findAll();
+			}
+			
+			// Cria o PopUp para mostrar o FedBack da ação do Usuário.
+			protected function msgGlowl(msg:String):void{
+				
+				var growl:MyGrowl = PopUpManager.createPopUp(this, view.renderers.MyGrowl, false) as MyGrowl;
+				growl.msg = msg;
+				growl.x = 940;
+				growl.y = 110;
+			}
+			
+			protected function btnEditarCliked():void{
+				
+				conexaoVO = dgConexoes.selectedItem as ConnectionVO;
+				abrirJanela(btnEditar.width, btnEditar.height, btnEditar.x, btnEditar.y);
+			}
+			
+			protected function excluirConexao():void{
+				
+				var resultAlert:Alert = Alert.show('Deseja mesmo excluir a Conexão selecionada?','Pergunta', Alert.OK | Alert.CANCEL, this,validaBtn,null,Alert.OK);
+			}
+			
+			protected function validaBtn(eventObj:CloseEvent):void
+			{
+				if (eventObj.detail == Alert.OK)
+				{
+					conexaoVO = dgConexoes.selectedItem as ConnectionVO;
+					conexaoVO.excluido = true;
+					conexaoVO.excluido_data = new Date();
+					conexaoVO.excluido_usuario = Model.instance.usuario.loggedUser.usuario;
+					delConexaoService.token = conexaoService.update(dgConexoes.selectedItem);
+				}else{
+					msgGlowl("Operação negada pelo usuário!!");
+				}
+			}
+			
+			// Filtra a grid pela descrição.
+			private function cmdProcurar():void
+			{
+				txtSearch.text=StringUtil.trim(txtSearch.text);
+				
+				if (txtSearch.text.length > 0)
+					
+					_source.filterFunction=filterFunction;
+				else
+					_source.filterFunction=null;
+				_source.refresh();
+			}
+			
+			// Filtra a grid pela descrição
+			private function filterFunction(item:ConnectionVO):Boolean
+			{
+				if (item.banco == null)
+					item.banco='';
+				
+				return (item.banco.toUpperCase().indexOf(txtSearch.text.toUpperCase()) > -1)
+			}
+			
+		]]>
+	</fx:Script>
+	<view:creationComplete>
+		<![CDATA[
+			
+			initPermissoes();
+			findAllConexaoService.token = conexaoService.findAll(); 
+		]]>
+	</view:creationComplete>
+	<fx:Declarations>
+		<services:ConnectionService id="conexaoService"/>
+		<s:CallResponder id="findAllConexaoService" result="conexaoService_resultHandler(event)" />
+		<s:CallResponder id="delConexaoService"/>
+		
+		<valueObjects:ConnectionVO id="conexaoVO"/>
+	</fx:Declarations>
+	
+	<mx:VBox width="100%" height="100%">
+		<s:HGroup width="100%" paddingTop="10" paddingLeft="10" paddingRight="10" paddingBottom="10">
+			<!-- BOTÃO NOVO -->
+			<components:IconButton label="Novo" id="btnNovo" click="btnNovoCliked()"
+								   icon="@Embed('/assets/images/icontexto-webdev-add.png')"/>
+			
+			<mx:Spacer width="10"/>
+			
+			<!-- BOTÃO DE EDITAR -->
+			<components:IconButton label="Editar" id="btnEditar" enabled="{dgConexoes.selectedItem!=null}"
+								   icon="@Embed('/assets/images/icontexto-webdev-edit.png')"
+								   click="btnEditarCliked()"/>
+			
+			<mx:Spacer width="10"/>
+			
+			<!-- BOTÃO DE EXCLUIR -->
+			<components:IconButton label="Excluir" id="btnExcluir" enabled="{dgConexoes.selectedItem!=null}"
+								   icon="@Embed('/assets/images/icontexto-webdev-remove.png')" 
+								   click="excluirConexao()"/>
+			
+		</s:HGroup>
+		
+		<mx:Form width="100%" right="100%">
+			<mx:FormItem label="Banco:">
+				<mx:TextInput id="txtSearch" width="100%"
+							  change="cmdProcurar()"/>
+			</mx:FormItem>
+		</mx:Form>
+		
+		<mx:DataGrid id="dgConexoes" 
+					 y="30" width="100%" left="10" height="100%"
+					 dataProvider="{_source}"
+					 paddingRight="10" paddingLeft="10" rowHeight="30" borderAlpha="0.4"
+					 headerHeight="30" verticalGridLines="false" headerStyleName="centered" headerSeparatorSkin="{Assets.HEADER_SEPARATOR}"
+					 >
+			<mx:columns>
+				<mx:DataGridColumn headerText="Código" dataField="id" width="100"/>
+				<mx:DataGridColumn headerText="Banco" dataField="banco" width="100"/>
+				<mx:DataGridColumn headerText="Servidor" dataField="servidor" width="100"/>
+				<mx:DataGridColumn headerText="Porta" dataField="porta" width="100"/>
+				<mx:DataGridColumn headerText="DataBase" dataField="data_base" width="100"/>
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:VBox>
+</view:BaseCad>

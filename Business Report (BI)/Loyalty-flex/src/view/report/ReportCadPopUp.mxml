@@ -1,0 +1,812 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+			   xmlns:services="services.*" title="Construção de Relatório"
+			   xmlns:components="view.renderers.flexsamples.components.*" 
+			   xmlns:valueObjects="valueObjects.*" xmlns:report="view.report.*" 
+			   xmlns:controls="com.brightPoint.controls.*"
+			   xmlns:viewStackEffects="org.efflex.mx.viewStackEffects.*"
+			   width="1200" height="600" backgroundColor="#E6E8EA" close="removePopUp()" 
+			    
+			   >
+	
+	<fx:Declarations>
+		
+		<services:ConnectionService id="conexaoService" /> <!-- Serviço Java para listar as Conexões na combo Box -->
+		<s:CallResponder id="findAllConexaoService" result="findAllConexaoService_resultHandler(event)"/>
+		<valueObjects:ConnectionVO id="conexaoVO"/> <!-- Objeto ConexaoVO -->
+		
+		<services:TableService id="tabelaService" /> <!-- Serviço Java para Listar as tabelas na combo Box -->
+		<s:CallResponder id="findAllTabelaService" result="findAllTabelaService_resultHandler(event)"/>
+		<valueObjects:TableVO id="tabelaVO" /> <!-- Objeto TabelaVO -->
+		
+		<services:ColumnService id="colunaService" /> <!-- Serviço Java para Listar as Colunas da tabela selecionada -->
+		<s:CallResponder id="findAllColunaService" result="findAllColunaService_resultHandler(event)"/>
+		<s:CallResponder id="executeQueryColunaService" result="executeQueryColunaService_resultHandler(event)"/>
+		
+		<valueObjects:ColumnVO id="colunaVO" /> <!-- Objeto ColunaVO -->
+		
+		<mx:Validator id="val1" required="true" source="{cmbConexoes}" property="selectedItem"
+					  requiredFieldError="Esse Campo é Obrigatório!!"
+					  trigger="{btnListaColunas}" triggerEvent="click"/>
+		<mx:Validator id="val2" required="true" source="{cmbTabelas}" property="selectedItem"
+					  requiredFieldError="Esse Campo é Obrigatório!!"
+					  trigger="{btnListaColunas}" triggerEvent="click"/>
+		
+		<mx:DateFormatter id="dateFormatter" formatString="DD" />
+		<mx:CurrencyFormatter id="currencyFormatter" precision="2" />
+	</fx:Declarations>
+	
+	<s:creationComplete>
+		<![CDATA[
+			findAllConexaoService.token = conexaoService.findAll();
+		]]>
+	</s:creationComplete>
+	
+	<fx:Script>
+		<![CDATA[
+			import events.LoginEvent;
+			
+			import mx.charts.CategoryAxis;
+			import mx.charts.Legend;
+			import mx.charts.chartClasses.IAxis;
+			import mx.charts.events.ChartItemEvent;
+			import mx.charts.series.AreaSeries;
+			import mx.charts.series.BarSeries;
+			import mx.charts.series.ColumnSeries;
+			import mx.charts.series.LineSeries;
+			import mx.charts.series.PieSeries;
+			import mx.charts.series.items.PieSeriesItem;
+			import mx.collections.ArrayCollection;
+			import mx.effects.easing.*;
+			import mx.events.DragEvent;
+			import mx.formatters.CurrencyFormatter;
+			import mx.managers.PopUpManager;
+			import mx.rpc.events.ResultEvent;
+			
+			import valueObjects.FilterVO;
+			
+			import view.renderers.buttonBar.CustomButtonBarSkin;
+			
+			[Bindable]private var _sourceConexoes:ArrayCollection = new ArrayCollection();
+			[Bindable]private var _sourceTabelas:ArrayCollection = new ArrayCollection();
+			[Bindable]private var _sourceColunas:ArrayCollection = new ArrayCollection();
+			[Bindable]private var _sourceSeries:ArrayCollection=new ArrayCollection();
+			[Bindable]private var _sourceCategoria:ArrayCollection=new ArrayCollection();
+			[Bindable]private var _source:ArrayCollection=new ArrayCollection();
+			[Bindable]private var _sourceFilters:ArrayCollection=new ArrayCollection();
+			[Bindable]private var _sourceOperating:ArrayCollection = new ArrayCollection();
+			
+			
+			protected function removePopUp():void{
+				
+				PopUpManager.removePopUp(this);
+				dispatchEvent(new LoginEvent(LoginEvent.ON_POPUP_REMOVE,null));
+			}
+			
+			protected function findAllConexaoService_resultHandler(e:ResultEvent):void{
+				
+				if (e.result != null)
+				{
+					_sourceConexoes = e.result as ArrayCollection;
+					cmbConexoes.dataProvider = _sourceConexoes;
+				}
+			}
+			
+			protected function getComboBoxConexaoLabel(data:Object):String
+			{
+				if (data!=null)
+					return data.nome;
+				
+				return "";
+			}
+			
+			protected function findAllTabelaService_resultHandler(e:ResultEvent):void{
+				
+				if(e.result != null){
+					
+					_sourceTabelas = e.result as ArrayCollection;
+					cmbTabelas.dataProvider = _sourceTabelas;
+				}
+			}
+			
+			protected function getComboBoxTabelaLabel(data:Object):String{
+				
+				if(data!=null)
+					return data.nome;
+				
+				return "";
+			}
+			
+			protected function findAllColunaService_resultHandler(e:ResultEvent):void{
+				
+				if(e.result != null){
+					_sourceColunas = e.result as ArrayCollection;
+				}
+			}
+			
+			protected function bnbCliked():void{
+				
+				vs.selectedIndex = bnbChart.selectedIndex;
+			}
+			
+			protected function bnbBarCliked():void{
+				
+				if(bnbBar.selectedIndex == 0){
+					vGroupChart.includeInLayout = true;
+					vGroupChart.visible = true;
+					hGroupMetricas.includeInLayout = true;
+					hGroupMetricas.visible = true;
+				}else{
+					vGroupChart.includeInLayout = false;
+					vGroupChart.visible = false;
+					hGroupMetricas.includeInLayout = false;
+					hGroupMetricas.visible = false;
+				}
+			}
+			
+			protected function removeAllDataArrayCollection():void{
+				
+				_sourceSeries.removeAll();
+				_sourceCategoria.removeAll();
+				_sourceColunas.removeAll();
+			}
+			
+			protected function btnListaColunasCliked():void{
+				
+				removeAllDataArrayCollection();
+				if ( Validator.validateAll(new Array(val1,val2)).length == 0)
+					findAllColunaService.token = colunaService.findAllByDataBaseUnknow(cmbConexoes.selectedItem as ConnectionVO,cmbTabelas.selectedItem as TableVO);
+			}
+			
+			protected function doDragDropSeries(event:DragEvent, format:String):void{
+				var dgRow:Object = new Object();
+				dgRow = event.dragSource.dataForFormat(format);
+				lstSeries.dataProvider.addItem(dgRow);
+			}
+			
+			protected function executeQuery():void{
+				
+				var query:ArrayCollection = new ArrayCollection();
+				for each(var c:ColumnVO in _sourceColunas){
+					
+					if(c.selected)
+						query.addItem(c);
+				}
+				
+				if(query.length > 0)
+					executeQueryColunaService.token = colunaService.executeQuery(cmbConexoes.selectedItem as ConnectionVO,cmbTabelas.selectedItem as TableVO,query)
+			}
+			
+			protected function executeQueryColunaService_resultHandler(e:ResultEvent):void{
+				
+				if(e.result != null){
+					_source = e.result as ArrayCollection;
+					creatingCharts();
+				}
+			}
+			
+			// Metodo que Seta a combo de operações para os filtros de acordo com o tipo de dado.
+			protected function creatingArrayOperating():void{
+				
+				enabledFildsOperating();
+				_sourceOperating.removeAll();
+				
+				_sourceOperating.addItem(["="]);
+				_sourceOperating.addItem(["<>"]);
+				
+				colunaVO = cboCampos.selectedItem as ColumnVO;
+				
+				if(colunaVO.type == "varchar" || colunaVO.type == "longtext" || colunaVO.type == "nvarchar"){
+					_sourceOperating.addItem(["Like"]);
+				}
+				
+				if(colunaVO.type == "Date" || colunaVO.type == "datetime" || colunaVO.type == "timestamp"){
+					_sourceOperating.addItem(["Between"]);
+					_sourceOperating.addItem([">"]);
+					_sourceOperating.addItem([">="]);
+					_sourceOperating.addItem(["<"]);
+					_sourceOperating.addItem(["<="]);
+				}
+				
+				if(colunaVO.type == "int" || colunaVO.type == "Boolean" || colunaVO.type == "bit" || (colunaVO.type).substring(0,4) == "int"){
+					
+					_sourceOperating.addItem(["Between"]);
+					_sourceOperating.addItem(["Like"]);
+					_sourceOperating.addItem([">"]);
+					_sourceOperating.addItem([">="]);
+					_sourceOperating.addItem(["<"]);
+					_sourceOperating.addItem(["<="]);
+				}
+				
+				_sourceOperating.addItem(["is Null"]);
+				_sourceOperating.addItem(["Not is Null"]);
+			}
+			
+			protected function enabledFildsOperating():void{
+				
+				hGroupData.visible = false;
+				hGroupData.includeInLayout = false;
+				hGroupNumeric.visible = false;
+				hGroupNumeric.includeInLayout = false;
+				txtValorInicial.includeInLayout = false;
+				txtValorInicial.visible = false;
+				dtInicial.includeInLayout = false;
+				dtInicial.visible = false;
+				dtFinal.includeInLayout = false;
+				dtFinal.visible = false;
+				nrsValorInicial.includeInLayout = false;
+				nrsValorInicial.visible = false;
+				nrsValorFinal.includeInLayout = false;
+				nrsValorFinal.visible = false;
+			}
+			
+			protected function creatingFildsOperating():void{
+				
+				enabledFildsOperating();
+				if(cboOperacao.selectedItem != "is Null" && cboOperacao.selectedItem != "Not is Null" ){
+					
+					if(colunaVO.type == "varchar" || colunaVO.type == "longtext" || colunaVO.type == "nvarchar"){
+						
+						txtValorInicial.includeInLayout = true;
+						txtValorInicial.visible = true;
+					}
+					
+					if(colunaVO.type == "Date" || colunaVO.type == "datetime" || colunaVO.type == "timestamp"){
+						
+						hGroupData.includeInLayout = true;
+						hGroupData.visible = true;
+						dtInicial.includeInLayout = true;
+						dtInicial.visible = true;
+						
+						if(cboOperacao.selectedItem == "Between"){
+							dtFinal.includeInLayout = true;
+							dtFinal.visible = true;		
+						}
+					}
+					
+					if(colunaVO.type == "int" || colunaVO.type == "Boolean" || colunaVO.type == "bit" || (colunaVO.type).substring(0,4) == "int"){
+						
+						hGroupNumeric.includeInLayout = true;
+						hGroupNumeric.visible = true;
+						nrsValorInicial.includeInLayout = true;
+						nrsValorInicial.visible = true;
+						
+						if(cboOperacao.selectedItem == "Between"){
+							nrsValorFinal.includeInLayout = true;
+							nrsValorFinal.visible = true;
+						}
+					}
+				}	
+			}
+			
+			protected function btnAdicionarFiltroCliked():void{
+				
+				var filtro:FilterVO = new FilterVO();
+				
+				filtro.column = cboCampos.selectedItem;
+				filtro.operation = cboOperacao.selectedItem;
+				
+				if(nrsValorInicial.visible == true){
+					filtro.home_filter = nrsValorInicial.value.toString();	
+				}else if(dtInicial.visible == true){
+					filtro.home_filter = dtInicial.selectedDate.toString(); 
+				}else if(txtValorInicial.visible == true){
+					filtro.home_filter = txtValorInicial.text; 
+				}else{
+					filtro.home_filter = cboOperacao.selectedItem;
+				}
+				
+				if(nrsValorFinal.visible == true){
+					filtro.end_filter = nrsValorFinal.value.toString();	
+				}else if(dtFinal.visible == true){
+					filtro.end_filter = dtFinal.selectedDate.toString(); 
+				}else{
+					filtro.end_filter = cboOperacao.selectedItem; 
+				}
+				
+				_sourceFilters.addItem(filtro);
+				vswFilter.selectedIndex = 0;
+			}
+			
+			protected function creatingCharts():void{
+				
+				
+				//Cria os pedaços do PieChart e as Categoria para cada Chart
+				creatingCategoryAxisChart();
+				
+				// Cria as Colunas dos Charts
+				creatingSeriesCharts();
+				
+				// Function que gera as legendas para cada Charts
+				creatingLegendCharts(barChart,columnChart,pieChart);
+			}
+			
+			// Cria o categoryAxis para cada Chart e retorna um PieSeries com o campo field preenchido.
+			protected function creatingCategoryAxisChart():void{
+				
+				//var seriePie:PieSeries = new PieSeries()
+				
+				if(_sourceCategoria.length > 0){
+					// Define a categoria axis barChart.
+					var vAxisBarChart:CategoryAxis = new CategoryAxis();
+					vAxisBarChart.categoryField = _sourceCategoria[0].field;
+					vAxisBarChart.dataProvider = _source;
+					barChart.verticalAxis = vAxisBarChart;
+					
+					//Define a Categoria Axis do columnChart
+					var hAxisColumnChart:CategoryAxis = new CategoryAxis();
+					hAxisColumnChart.categoryField = _sourceCategoria[0].field;
+					hAxisColumnChart.dataProvider = _source;
+					columnChart.horizontalAxis = hAxisColumnChart;
+					
+					//Define a Categoria Axis do lineChart
+					var hAxisLineChart:CategoryAxis = new CategoryAxis();
+					hAxisLineChart.dataProvider = _source;
+					hAxisLineChart.categoryField = _sourceCategoria[0].field;
+					lineChart.horizontalAxis = hAxisLineChart;
+					
+					//Define a Categoria Axis do areaChart
+					var hAxisAreaChart:CategoryAxis = new CategoryAxis();
+					//hAxisAreaChart.title = cmbTabelas
+					hAxisAreaChart.dataProvider = _source;
+					hAxisAreaChart.categoryField = _sourceCategoria[0].field;
+					areaChart.horizontalAxis = hAxisAreaChart;
+					
+					// Seta a categoria do PieChart
+					pieSeries.field = _sourceCategoria[0].field;
+					
+				}
+				
+			}
+			
+			protected function creatingSeriesCharts():void{
+				
+				if(_sourceColunas.length > 0){
+
+					var seriesBar:Array=new Array(); // Add the series BarChart.
+					var seriesPie:Array=new Array(); // Add the series PieChart.
+					var seriesColumn:Array = new Array(); // Add the series ColumnChart.
+					var seriesLine:Array = new Array(); // Add the series LineChart.
+					var seriesArea:Array = new Array(); // Add the series AreaChart.
+					
+					for each(var campos:ColumnVO in _sourceSeries){
+						
+						// Cria uma serie para o BarChart
+						var serieBar:BarSeries = new BarSeries();
+						
+						// Cria uma serie para o ColumnChart
+						var serieColumn:ColumnSeries = new ColumnSeries();
+						
+						// Cria uma serie para o LineChart
+						var serieLine:LineSeries = new LineSeries();
+						
+						// Cria uma serie para o AreaChart
+						var serieArea:AreaSeries = new AreaSeries();
+						
+						serieBar.xField = campos.field; // Seta o eixo X para o serieBar
+						serieBar.displayName = campos.field; // Seta o displayName para o serieBar
+
+						if(_sourceCategoria.length > 0){
+							
+							serieBar.yField = _sourceCategoria.getItemAt(0).field; // Seta o eixo Y para o serieBar
+							
+							serieColumn.xField = _sourceCategoria.getItemAt(0).field; // Seta o eixo X para o serieColumn
+						}
+						
+						serieColumn.yField = campos.field; // Seta o eixo Y para o serieColumn
+						serieColumn.displayName = campos.field; // Seta o displayName para o serieColumn
+						
+						
+						serieLine.yField = campos.field; // Seta o eixo Y para o serieLine
+						serieLine.displayName = campos.field; // Seta o displayName para o serieLine
+						
+						serieArea.yField = campos.field; // Seta o eixo Y para o serieArea
+						serieArea.displayName = campos.field; // Seta o displayName para o serieArea
+						
+						// #### LineChart ####
+						seriesLine.push(serieLine); // Seta a serie para a array de seriesLine
+						
+						seriesBar.push(serieBar); // Seta a serie para a array de seriesBar
+						
+						seriesColumn.push(serieColumn); // Seta a serie para a array de seriesColumn
+
+						pieSeries.nameField = campos.field; //Seta o pedaço do PieChart
+						
+						seriesArea.push(serieArea); // Seta a serie para a array de seriesArea
+					}
+					
+					barChart.series = seriesBar; // seta o barChart com a array de series
+					
+					columnChart.series = seriesColumn; // seta o columnChart com a array de series
+					
+					lineChart.series = seriesLine; // seta o lineChart com a array de series
+					
+					seriesPie.push(pieSeries); // seta a serie para a array de seriesPie
+					pieChart = new PieChart();
+					pieChart.series = seriesPie; // seta a pieChart com a array de seriesPie
+					
+					areaChart.series = seriesArea; // seta a areaChart com a array de seriesArea
+					
+				}
+			}
+			
+			// Cria as Legendas para cada Chart
+			protected function creatingLegendCharts(barChart:BarChart, columnChart:ColumnChart, pieChart:PieChart ):void{
+				
+				// Create a legend Bar.
+				var legendBar:Legend = new Legend();
+				legendBar.direction = "horizontal";
+				legendBar.dataProvider = barChart;
+				
+				// Create a legend Column.
+				var legendColumn:Legend = new Legend();
+				legendColumn.direction = "horizontal";
+				legendColumn.dataProvider = columnChart;
+				
+				// Create a legend Line.
+				var legendLine:Legend = new Legend();
+				legendLine.direction = "horizontal";
+				legendLine.dataProvider = lineChart;
+				
+				// Create a legend Pie.
+				var legendPie:Legend = new Legend();
+				legendPie.direction = "horizontal";
+				legendPie.dataProvider = pieChart;
+				
+				// Create a legend Area.
+				var legendArea:Legend = new Legend();
+				legendArea.direction = "horizontal";
+				legendArea.dataProvider = areaChart;
+				
+				
+				// Attach chart and legend to the display list.
+				canvasBar.addChild(legendBar);
+				canvasColumn.addChild(legendColumn);
+				canvasLine.addChild(legendLine);
+				canvasPie.addChild(legendPie);
+				canvasArea.addChild(legendArea);
+			}
+			
+			protected function linearAxis_labelFunc(item:Object, prevValue:Object, axis:IAxis):String {
+				return currencyFormatter.format(item);
+			}
+			
+			protected function categoryAxis_labelFunc(item:Object, prevValue:Object, axis:CategoryAxis, categoryItem:Object):String {
+				var datNum:Number = Date.parse(item);
+				var tempDate:Date = new Date(datNum);
+				return dateFormatter.format(tempDate).toUpperCase();
+			}
+			
+			// ################ Efeitos nos Gráficos #####################
+			protected function pieChart_itemClick(evt:ChartItemEvent):void {
+				var item:PieSeriesItem = evt.hitData.chartItem as PieSeriesItem;
+				var degrees:Number = radiansToDegrees(item.startAngle);
+				var arr:Array = [];
+				
+				arr[item.index] = 0.2;
+				
+				pieSeries.perWedgeExplodeRadius = arr;
+				pieSeries.startAngle -= degrees;
+				
+				_source.refresh();
+			}
+			
+			protected function radiansToDegrees(radians:Number):Number {
+				return radians * (180 / Math.PI);
+			}
+			/*
+			protected function setGaugeAlerts():void {
+				gauge.setStyle("alertRatios",[a1.value,a2.value,a3.value]);
+				gauge.setStyle("alertColors",[cp1.selectedColor,cp2.selectedColor,cp3.selectedColor]);
+			}*/
+		]]>
+	</fx:Script>
+	<mx:HDividedBox width="100%" height="100%" >
+		<mx:Box width="100%" height="100%" borderVisible="true">
+		
+			<s:HGroup  width="100%" height="8%" paddingLeft="5" paddingTop="5">
+				<s:ButtonBar id="bnbBar" skinClass="view.renderers.buttonBar.CustomButtonBarSkin" 
+							 click="bnbBarCliked()" width="40" height="25">
+					<s:dataProvider>
+						<s:ArrayList>
+							<fx:Object icon="@Embed('assets/images/Report.png')" />
+							<fx:Object icon="@Embed('assets/images/Table.png')" />
+						</s:ArrayList>
+					</s:dataProvider>
+				</s:ButtonBar>
+				
+				<s:Label text="Conexão:" paddingBottom="5" paddingLeft="5" paddingRight="5" paddingTop="5" height="26"/>
+				
+				<s:ComboBox id="cmbConexoes" selectedItem="{conexaoVO}" paddingBottom="5" labelFunction="getComboBoxConexaoLabel"
+							paddingLeft="5" paddingRight="5" paddingTop="5" height="23">
+					<s:change>
+						<![CDATA[
+							findAllTabelaService.token = tabelaService.findAll(cmbConexoes.selectedItem as ConnectionVO);
+						]]>
+					</s:change>
+				</s:ComboBox>
+				
+				<s:ComboBox id="cmbTabelas" selectedItem="{tabelaVO}" paddingBottom="5" labelFunction="getComboBoxTabelaLabel"
+							paddingLeft="5" paddingRight="5" paddingTop="5" height="23" enabled="{cmbConexoes.selectedItem!=null}" width="428"/>
+				
+				<components:IconButton icon="@Embed('assets/images/Floppy.png')" paddingBottom="5" paddingLeft="5" 
+									   paddingRight="5" paddingTop="5" width="32" height="32"/>
+				<components:IconButton id="btnListaColunas" click="btnListaColunasCliked()"
+									   icon="@Embed('assets/images/closeaccordion1.png')" paddingBottom="5" paddingLeft="5" 
+									   paddingRight="5" paddingTop="5" width="32" height="32"/>
+					
+			</s:HGroup>
+			
+			<mx:HDividedBox width="100%" height="92%" paddingLeft="5" paddingBottom="5">
+				
+				<s:HGroup width="100%" height="100%">
+					<s:VGroup id="vGroupChart" width="100%" height="100%" >
+						
+						<s:ButtonBar id="bnbChart" click="bnbCliked()" 
+									 skinClass="view.renderers.buttonBar.CustomButtonBarSkin" >
+							<s:dataProvider>
+								<s:ArrayList>
+									<fx:Object icon="@Embed('assets/images/office-chart-column.png')" toolTipShow="Barras(BarChart)"/>
+									<fx:Object icon="@Embed('assets/images/office-chart-column.png')" toolTipShow="Colunas(ColumnChart)"/>
+									<fx:Object icon="@Embed('assets/images/office-chart-line.png')" toolTipShow="Linhas(LineChart)"/>
+									<fx:Object icon="@Embed('assets/images/office-chart-pie.png')" toolTipShow="Pizza(PieChart)"/>
+									<fx:Object icon="@Embed('assets/images/office-chart-area.png')" toolTipShow="Area(AreaChart)" />
+								</s:ArrayList>
+							</s:dataProvider>
+							
+						</s:ButtonBar>						
+	
+						
+						<mx:ViewStack id="vs" width="100%" height="100%" creationPolicy="all">
+							<mx:Canvas id="canvasBar" width="100%" height="100%" creationPolicy="all">
+								<mx:BarChart id="barChart" width="100%" height="100%" showDataTips="true" 
+											 dataProvider="{_source}">
+									
+								</mx:BarChart>
+							</mx:Canvas>
+							
+							<mx:Canvas width="100%" height="100%" id="canvasColumn" creationPolicy="all">
+								<mx:ColumnChart id="columnChart" width="100%" height="100%" showDataTips="true"
+												
+												dataProvider="{_source}">
+									
+								</mx:ColumnChart>
+							</mx:Canvas>
+							
+							<mx:Canvas width="100%" height="100%" id="canvasLine" creationPolicy="all">
+								<mx:LineChart id="lineChart" width="100%" height="100%" color="0x323232" showDataTips="true"
+											  dataProvider="{_source}">
+									
+								</mx:LineChart>
+							</mx:Canvas>
+							
+							<mx:Canvas width="100%" height="100%" id="canvasPie" creationPolicy="all">
+								<mx:PieChart id="pieChart" width="100%" height="100%" color="0x323232" showDataTips="true"
+											 dataProvider="{_source}" itemClick="pieChart_itemClick(event);">
+									<mx:series>
+										<mx:PieSeries id="pieSeries"
+													  field="@data"
+													  nameField="@label">
+											<mx:showDataEffect>
+												<mx:SeriesInterpolate duration="1500"
+																	  easingFunction="{Elastic.easeOut}" />
+											</mx:showDataEffect>
+											<mx:filters>
+												<mx:DropShadowFilter />
+											</mx:filters>
+										</mx:PieSeries>
+									</mx:series>
+								</mx:PieChart>
+							</mx:Canvas>
+							
+							<mx:Canvas width="100%" height="100%" id="canvasArea" creationPolicy="all">
+								<mx:AreaChart id="areaChart" width="100%" height="100%" color="0x323232" showDataTips="true"
+											  dataProvider="{_source}">
+									
+								</mx:AreaChart>
+							</mx:Canvas>
+							
+							<!-- #### GAUGE #### -->
+							<!--
+							<mx:Canvas width="100%" height="100%" id="canvasGauge">
+								<mx:HDividedBox width="100%" height="100%">
+									
+									<mx:Form width="100%" height="100%">
+										
+										<mx:FormItem label="Size">
+											<s:HSlider minimum="25" maximum="1000" id="gaugeSize" value="{gauge.diameter}" change="{gauge.diameter=gaugeSize.value;}" />
+										</mx:FormItem>
+										<mx:FormItem label="Value">
+											<s:NumericStepper minimum="0" snapInterval="1" maximum="{gauge.maxValue}" />
+										</mx:FormItem>
+										<mx:FormItem label="Targets" width="100%" height="100%">
+											
+											<mx:HBox color="0">
+												<mx:ColorPicker id="cp1" selectedColor="0xDD0000" change="setGaugeAlerts();"/><mx:NumericStepper minimum="{gauge.minValue}" maximum="{a2.value}" value="33" id="a1" change="setGaugeAlerts();"/>
+											</mx:HBox>
+											<mx:HBox color="0">
+												<mx:ColorPicker id="cp2" selectedColor="0xFFFF00" change="setGaugeAlerts();"/><mx:NumericStepper minimum="{a1.value}" maximum="{a3.value}" value="66" id="a2" change="setGaugeAlerts();"/>
+											</mx:HBox>
+											<mx:HBox color="0">
+												<mx:ColorPicker id="cp3" selectedColor="0x00FF00" change="setGaugeAlerts();"/><mx:NumericStepper minimum="{a2.value}" maximum="{gauge.maxValue}" value="100" id="a3" change="setGaugeAlerts();"/>
+											</mx:HBox>
+										</mx:FormItem>
+									</mx:Form>
+									
+									<controls:Gauge minValue="0" maxValue="100" showValue="true" width="100%" height="100%"
+													diameter="200" id="gauge" verticalCenter="0" horizontalCenter="0"
+													alertAlphas="[.7,.9,.6]" alertColors="[0xDD0000,0xFFFF00,0x00FF00]" alertRatios="[33,66,100]"
+													faceColor="0x327bc2" 
+													ticksColor="0xFFFFFF"
+													fontColor="0xFFFFFF"
+													pointerColor="0xffa449" 
+													bezelColor="0x999999"
+													faceShadowColor="0x777777"/>
+								</mx:HDividedBox>
+							</mx:Canvas>
+							-->
+						</mx:ViewStack>
+					</s:VGroup>
+			
+					<mx:DataGrid id="dg" width="100%" height="100%" paddingBottom="5" paddingLeft="5" 
+								 paddingRight="5" dataProvider="{_source}">
+							
+					</mx:DataGrid>
+				</s:HGroup>
+			</mx:HDividedBox>
+			
+			<s:HGroup id="hGroupMetricas" width="100%" height="40%" paddingBottom="5" paddingLeft="5" >
+					
+				<s:VGroup width="100%" height="100%" id="vGroupColunas">
+					
+					<s:Label text="Colunas (Séries)"/>
+					<s:List width="100%" height="100%" id="lstSeries" dragEnabled="true" dropEnabled="true"
+							dragMoveEnabled="true"
+							dataProvider="{_sourceSeries}" >
+						<s:itemRenderer>
+							<fx:Component>
+								<s:ItemRenderer>
+									
+									<s:layout>
+										<s:HorizontalLayout horizontalAlign="left" /> 
+									</s:layout>
+									
+									<s:Label text="@{data.field}" paddingTop="5"/>
+								</s:ItemRenderer>
+							</fx:Component>
+						</s:itemRenderer>
+					</s:List>
+				</s:VGroup>
+				
+				<s:VGroup width="100%" height="100%" id="vgroupCategoria">
+					
+					<s:Label text="Categoria (Axis)"/>
+					<s:List width="100%" height="100%" id="lstcategoria" dragEnabled="true" dropEnabled="true"
+							dragMoveEnabled="true" dataProvider="{_sourceCategoria}">
+						<s:itemRenderer>
+							<fx:Component>
+								<s:ItemRenderer>
+									
+									<s:layout>
+										<s:HorizontalLayout horizontalAlign="left" /> 
+									</s:layout>
+									
+									<s:Label text="@{data.field}" paddingTop="5"/>
+								</s:ItemRenderer>
+							</fx:Component>
+						</s:itemRenderer>
+					</s:List>
+				</s:VGroup>
+			</s:HGroup>
+				
+		</mx:Box>
+		<mx:VDividedBox width="30%" height="100%" borderVisible="true">
+			<mx:Box width="100%" height="100%" paddingBottom="10" paddingLeft="10" 
+					borderVisible="true" paddingRight="5" paddingTop="10">
+				
+					<s:ButtonBar id="bnbBarColunas" skinClass="view.renderers.buttonBar.CustomButtonBarSkin" 
+								 width="68" height="25">
+						<s:dataProvider>
+							<s:ArrayList>
+								<fx:Object icon="@Embed('assets/images/Report.png')" />
+								<fx:Object icon="@Embed('assets/images/Table.png')" />
+								<fx:Object icon="@Embed('assets/images/Table.png')" />
+							</s:ArrayList>
+						</s:dataProvider>
+					</s:ButtonBar>
+				
+				<s:Label text="Colunas" backgroundColor="#D4CFCF" width="100%"/>
+				<s:List width="100%" height="100%" id="lstColunas" dataProvider="{_sourceColunas}"
+						dragEnabled="true" dropEnabled="true" >
+					<s:itemRenderer>
+						<fx:Component>
+							<s:ItemRenderer>
+								
+								<s:layout>
+									<s:HorizontalLayout horizontalAlign="left" /> 
+								</s:layout>
+								
+								<mx:CheckBox selectedField="selected" change=" data.selected = event.target.selected " />
+								<s:Label text="@{data.field}" paddingTop="5"/>
+							</s:ItemRenderer>
+						</fx:Component>
+					</s:itemRenderer>
+				</s:List>
+				
+			</mx:Box>
+			<mx:Box width="100%" height="100%" paddingBottom="5" paddingLeft="10" paddingRight="5" paddingTop="10" borderVisible="true">
+
+				<mx:ViewStack id="vswFilter" width="100%" height="100%">
+					
+					<s:NavigatorContent label="Filtros" width="100%" height="100%" >
+						<s:Button label="+"  width="30" >
+							<s:click>
+								<![CDATA[
+									vswFilter.selectedIndex = 1;
+								]]>
+							</s:click>
+						</s:Button>
+						<s:Button label="-"  width="30"  x="30">
+							<s:click>
+								<![CDATA[
+									_sourceFilters.removeItemAt(lstFilters.selectedIndex);
+								]]>
+							</s:click>
+						</s:Button>
+						
+						<s:List width="100%" height="197" id="lstFilters" dragEnabled="true" dropEnabled="true"
+								dragMoveEnabled="true" dataProvider="{_sourceFilters}" y="28"/>
+						<s:Button width="100%" label="Executar" height="26" click="executeQuery()" x="4" y="231"/>
+					</s:NavigatorContent>
+					
+					<s:NavigatorContent label="Adicionar" width="100%" height="100%" >
+						<s:layout>
+							<s:VerticalLayout horizontalAlign="left" /> 
+						</s:layout>
+						
+						<mx:FormItem width="100%" height="24" label="Campos:">
+							<s:ComboBox id="cboCampos" width="90%" dataProvider="{_sourceColunas}" 
+										change="creatingArrayOperating()"
+										labelField="field"/>
+						</mx:FormItem>
+						
+						<mx:FormItem width="100%" height="25" label="Operação:">
+							<s:ComboBox id="cboOperacao" width="90%" dataProvider="{_sourceOperating}"
+										change="creatingFildsOperating()"/>
+						</mx:FormItem>
+						
+						<mx:FormItem width="100%" height="100%" label="Valor:">
+							<s:HGroup id="hGroupNumeric" width="100%" height="100%" visible="false" includeInLayout="false">
+								<s:NumericStepper id="nrsValorInicial" width="100%" visible="false" 
+												  includeInLayout="false" stepSize="0.01"/>
+								<s:NumericStepper id="nrsValorFinal" width="100%" visible="false" 
+												  includeInLayout="false" stepSize="0.01"/>	
+							</s:HGroup>
+							
+							<s:TextInput id="txtValorInicial" width="100%" visible="false" includeInLayout="false"/>
+							
+							<s:HGroup id="hGroupData" width="100%" height="100%" visible="false" includeInLayout="false">
+								<mx:DateField id="dtInicial" width="100%" visible="false" includeInLayout="false"/>
+								<mx:DateField id="dtFinal" width="100%" visible="false" includeInLayout="false"/>
+							</s:HGroup>
+						</mx:FormItem>
+						
+						<s:HGroup width="100%" height="24">
+							<s:Button width="50%" label="Adicionar" click="btnAdicionarFiltroCliked()"/>
+							<s:Button width="50%" label="Cancelar" >
+								<s:click>
+									<![CDATA[
+										vswFilter.selectedIndex = 0;
+									]]>
+								</s:click>
+							</s:Button>
+						</s:HGroup>
+					</s:NavigatorContent>
+				</mx:ViewStack>
+
+			</mx:Box>
+		</mx:VDividedBox>
+	</mx:HDividedBox>
+</s:TitleWindow>

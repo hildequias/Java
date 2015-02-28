@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+			   xmlns:services="services.*"
+			   title="Cadastro de Perfil"
+			   close="removePopUp()"
+			   width="500" height="400" backgroundColor="#E6E8EA"
+			    width.normal="424" height.normal="266" width.extendido="664">
+	
+	<s:creationComplete>
+		<![CDATA[
+			
+		]]>
+	</s:creationComplete>
+	
+	<s:states>
+		<s:State name="normal"/>
+		<s:State name="extendido"/>
+	</s:states>
+	
+	<s:transitions>
+		<s:Transition>
+			<s:Parallel>
+				<s:Sequence>
+					<s:Resize target="{this}"/>
+					<s:Move target="{this}"/>
+				</s:Sequence>
+				<s:Fade targets="{[this]}"/>
+			</s:Parallel>
+		</s:Transition>
+	</s:transitions>
+	
+	<fx:Script>
+		<![CDATA[
+			import api.model.Model;
+			
+			import events.LoginEvent;
+			
+			import mx.managers.PopUpManager;
+			
+			import valueObjects.UserProfileVO;
+			
+			[Bindable]
+			public var perfilUsuarioVO:UserProfileVO = new UserProfileVO();
+			
+			protected function removePopUp():void{
+				
+				PopUpManager.removePopUp(this);
+				dispatchEvent(new LoginEvent(LoginEvent.ON_POPUP_REMOVE,null));
+			}
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<services:UserProfileService id="perfilUsuarioService"/>
+		<s:CallResponder id="addPerfilUsuario" >
+			<s:result>
+				<![CDATA[
+					perfilUsuarioVO = new UserProfileVO();
+					removePopUp();
+				]]>
+			</s:result>
+		</s:CallResponder>
+		
+		<mx:Validator id="val1" required="true" source="{txtDescricao}" property="text"
+					  requiredFieldError="Esse Campo é Obrigatório!!"
+					  trigger="{btnAdicionar}" triggerEvent="click"/>
+	</fx:Declarations>
+	
+	<mx:Form width="299"  x="104" y="77" height="176">
+		<mx:FormItem label="Descrição" width="100%">
+			<s:TextInput id="txtDescricao" text="@{perfilUsuarioVO.descricao}" width="100%"/>
+		</mx:FormItem>
+		<mx:FormItem>
+			<s:Button id="btnAdicionar" label="{(perfilUsuarioVO.id>0)?'Salvar':'Adicionar'}">
+				<s:click>
+					<![CDATA[
+					if (perfilUsuarioVO.id==0){
+						perfilUsuarioVO.cadastro_usuario = Model.instance.usuario.loggedUser.usuario;
+						perfilUsuarioVO.cadastro_data = new Date();
+					}
+					if ( Validator.validateAll(new Array(val1)).length == 0) 
+						addPerfilUsuario.token = (perfilUsuarioVO.id>0) ? perfilUsuarioService.update(perfilUsuarioVO):perfilUsuarioService.add(perfilUsuarioVO);
+						
+					]]>
+				</s:click>
+			</s:Button>
+		</mx:FormItem>
+	</mx:Form>
+	<mx:FormHeading label="Perfil de Usuário" x="193" y="48"/>
+</s:TitleWindow>
